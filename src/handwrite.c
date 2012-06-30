@@ -41,74 +41,71 @@ Point p;
 gboolean PASS_FLAG = FALSE;
 
 static void
-set_window_background ( GtkWidget *window, KeyBoard *keyboard )
+set_window_background(GtkWidget *window, KeyBoard *keyboard)
 {
-	GdkPixbuf *pixbuf;
-	GdkBitmap *bitmap;
-	GdkPixmap *pixmap;
-	gchar filepath[256];
+    GdkPixbuf *pixbuf;
+    GdkBitmap *bitmap;
+    GdkPixmap *pixmap;
+    gchar filepath[256];
 
-	sprintf ( filepath, "%s/beijing.png", keyboard->userdir );
-	pixbuf = gdk_pixbuf_new_from_file ( filepath, NULL );
-	gdk_pixbuf_render_pixmap_and_mask ( pixbuf, &pixmap, &bitmap, 128 );
-	gtk_widget_shape_combine_mask ( window, bitmap, 0, 0 );
-	GtkStyle *style = gtk_style_copy ( window->style );
-	style->bg_pixmap[GTK_STATE_NORMAL] = g_object_ref ( pixmap );
-	if ( style->bg_pixmap[GTK_STATE_NORMAL] )
-		g_object_unref ( style->bg_pixmap[GTK_STATE_NORMAL] );
-	gtk_widget_set_style ( window, style );
-	g_object_unref ( pixbuf );
+    sprintf(filepath, "%s/beijing.png", keyboard->userdir);
+    pixbuf = gdk_pixbuf_new_from_file(filepath, NULL);
+    gdk_pixbuf_render_pixmap_and_mask(pixbuf, &pixmap, &bitmap, 128);
+    gtk_widget_shape_combine_mask(window, bitmap, 0, 0);
+    GtkStyle *style = gtk_style_copy(window->style);
+    style->bg_pixmap[GTK_STATE_NORMAL] = g_object_ref(pixmap);
+    if (style->bg_pixmap[GTK_STATE_NORMAL])
+        g_object_unref(style->bg_pixmap[GTK_STATE_NORMAL]);
+    gtk_widget_set_style(window, style);
+    g_object_unref(pixbuf);
 }
 
 static gboolean
-window_move_callback ( GtkWidget* widget, GdkEventButton *event, GdkWindowEdge edge )
+window_move_callback(GtkWidget* widget, GdkEventButton *event,
+                     GdkWindowEdge edge)
 {
-	if ( event->type == GDK_BUTTON_PRESS )
-	{
-		if ( 3 == event->button )
-		{
-			gtk_window_begin_move_drag ( GTK_WINDOW ( gtk_widget_get_toplevel ( widget ) ),
-			                             event->button,
-			                             event->x_root,
-			                             event->y_root,
-			                             event->time );
-		}
-	}
+    if (event->type == GDK_BUTTON_PRESS) {
+        if (3 == event->button) {
+            gtk_window_begin_move_drag(
+                GTK_WINDOW(gtk_widget_get_toplevel(widget)),
+                event->button, event->x_root, event->y_root, event->time);
+        }
+    }
 
-	return FALSE;
+    return FALSE;
 }
 
 static void
-simulation_keyboard_input ( int key_code )
+simulation_keyboard_input(int key_code)
 {
-	Display* disp = XOpenDisplay ( NULL );
-	if ( disp == NULL )
-		return;
-	XTestFakeKeyEvent ( disp,key_code, True,0 );
-	XTestFakeKeyEvent ( disp,key_code, False,0 );
-	XFlush ( disp );
-	XCloseDisplay ( disp );
+    Display* disp = XOpenDisplay(NULL);
+    if (disp == NULL)
+        return;
+    XTestFakeKeyEvent(disp,key_code, True, 0);
+    XTestFakeKeyEvent(disp,key_code, False, 0);
+    XFlush(disp);
+    XCloseDisplay(disp);
 }
 
 static void
-set_button_font ( GtkWidget *bt )
+set_button_font(GtkWidget *bt)
 {
-	GtkWidget *font_label;
-	PangoFontDescription* text_font = NULL;
-	text_font = pango_font_description_from_string ( "Arial,bold 14" );
-	font_label = gtk_bin_get_child ( GTK_BIN ( bt ) );
-	gtk_widget_modify_font ( font_label, text_font );
+    GtkWidget *font_label;
+    PangoFontDescription* text_font = NULL;
+    text_font = pango_font_description_from_string("Arial,bold 14");
+    font_label = gtk_bin_get_child(GTK_BIN(bt));
+    gtk_widget_modify_font(font_label, text_font);
 }
 
 static void
-set_font_size ( GtkWidget *bt )
+set_font_size(GtkWidget *bt)
 {
-	GtkWidget *font_label;
-	PangoFontDescription* text_font = NULL;
-	//~ text_font = pango_font_description_from_string("Arial,bold 13");
-	text_font = pango_font_description_from_string ( "WenQuanYi Zen Hei 13" );
-	font_label = gtk_bin_get_child ( GTK_BIN ( bt ) );
-	gtk_widget_modify_font ( font_label, text_font );
+    GtkWidget *font_label;
+    PangoFontDescription* text_font = NULL;
+    //~ text_font = pango_font_description_from_string("Arial,bold 13");
+    text_font = pango_font_description_from_string ( "WenQuanYi Zen Hei 13" );
+    font_label = gtk_bin_get_child ( GTK_BIN ( bt ) );
+    gtk_widget_modify_font ( font_label, text_font );
 }
 
 static gchar *
