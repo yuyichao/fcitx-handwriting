@@ -37,8 +37,8 @@ typedef struct _Stroke
     Point last;
     Point stroke[STROKE_MAX_POINT];
     int ncstroke;
-    char cstroke[STROKE_MAX_POINT*4];
-    short pPoints[STROKE_MAX_POINT*4];
+    char cstroke[STROKE_MAX_POINT * 4];
+    short pPoints[STROKE_MAX_POINT * 4];
 
     int num;							/* 笔画数 */
     zinnia_recognizer_t *recognizer;	/* 手写识别器 */

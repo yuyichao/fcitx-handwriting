@@ -1,4 +1,3 @@
-#include <fcitx/module/dbus/dbusstuff.h>
 #include <fcitx/frontend.h>
 #include <fcitx-utils/log.h>
 #include <libintl.h>
@@ -7,6 +6,7 @@
 #include <fcitx/module.h>
 #include <fcitx/candidate.h>
 #include <dbus/dbus.h>
+#include <fcitx/module/dbus/fcitx-dbus.h>
 
 #define _(x) gettext(x)
 
@@ -44,11 +44,10 @@ static void*
 HandWritingCreate(FcitxInstance* instance)
 {
     FcitxHandWriting* handwriting = fcitx_utils_new(FcitxHandWriting);
-    FcitxModuleFunctionArg arg;
     handwriting->owner = instance;
-    handwriting->conn = InvokeFunction(instance, FCITX_DBUS, GETCONNECTION, arg);
+    handwriting->conn = FcitxDBusGetConnection(instance);
     if (handwriting->conn == NULL) {
-        free (handwriting);
+        free(handwriting);
         return NULL;
     }
 

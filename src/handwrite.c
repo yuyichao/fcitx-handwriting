@@ -120,34 +120,43 @@ get_handwrite_config_dir ()
 static void
 stroke_clean_draw ( KeyBoard *keyboard )
 {
-	stroke_clean ( keyboard->stk );
-	gtk_widget_queue_draw ( keyboard->window );
+    stroke_clean ( keyboard->stk );
+    gtk_widget_queue_draw ( keyboard->window );
 }
 
-static gboolean
-create_dbus ( KeyBoard *keyboard )
+static KeyBoard*
+create_dbus()
 {
-	GError* error = NULL;
-	guint   result;
-	keyboard->bus = dbus_g_bus_get ( DBUS_BUS_SESSION, &error );
-	if ( !keyboard->bus )
-	{
-		g_warning ( "Failed to connect to the D-BUS daemon: %s", error->message );
-		return FALSE;
-	}
-	keyboard->proxy = dbus_g_proxy_new_for_name ( keyboard->bus,
-	                  DBUS_SERVICE_DBUS,
-	                  DBUS_PATH_DBUS,
-	                  DBUS_INTERFACE_DBUS );
-	org_freedesktop_DBus_request_name ( keyboard->proxy,
-	                                    DBUS_HANDWRITING_SERVICE,
-	                                    DBUS_NAME_FLAG_DO_NOT_QUEUE, &result, &error );
+    GError* error = NULL;
+    KeyBoard *keyboard;
+    guint result;
+    keyboard = g_new0(KeyBoard, 1);
+    if (G_UNLIKELY(keyboard))
+        return NULL;
 
-	HandWritingService *service = g_object_new ( TYPE_HANDWRITING_SERVICE, NULL );
-	dbus_g_connection_register_g_object ( keyboard->bus, DBUS_HANDWRITING_SERVICE_PATH, G_OBJECT ( service ) );
-	keyboard->service = service;
+    keyboard->bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+    if (!keyboard->bus) {
+        g_warning("Failed to connect to the D-BUS daemon: %s", error->message);
+        goto fail;
+    }
+    keyboard->proxy = dbus_g_proxy_new_for_name(keyboard->bus,
+                                                DBUS_SERVICE_DBUS,
+                                                DBUS_PATH_DBUS,
+                                                DBUS_INTERFACE_DBUS);
+    org_freedesktop_DBus_request_name(keyboard->proxy,
+                                      DBUS_HANDWRITING_SERVICE,
+                                      DBUS_NAME_FLAG_DO_NOT_QUEUE,
+                                      &result, &error);
 
-	return TRUE;
+    HandWritingService *service = g_object_new(TYPE_HANDWRITING_SERVICE, NULL);
+    dbus_g_connection_register_g_object(keyboard->bus,
+                                        DBUS_HANDWRITING_SERVICE_PATH,
+                                        G_OBJECT(service));
+    keyboard->service = service;
+    return keyboard;
+fail:
+    g_free(keyboard);
+    return NULL;
 }
 
 static void
@@ -430,7 +439,7 @@ static gboolean
 handwriter_notify_event ( GtkWidget * widget, GdkEventExpose * event, gpointer data )
 {
 	GdkCursorType ct;
-	
+
 	ct = GDK_PENCIL;
 	gdk_window_set_cursor ( widget->window , gdk_cursor_new ( ct ) );
 	return FALSE;
@@ -529,67 +538,66 @@ create_hand_button ( KeyBoard *keyboard )
 	return fixed;
 }
 
-static GtkWidget *
+static GtkWidget*
 create_window ()
 {
-	GtkWidget *fixed;
-	KeyBoard *keyboard;
-	gchar filepath[256];
+    GtkWidget *fixed;
+    KeyBoard *keyboard;
+    gchar filepath[256];
 
-	keyboard = g_new0 ( KeyBoard,1 );
-	if ( !create_dbus ( keyboard ) )							/* 创建D-BUS */
-	{
-		fprintf ( stderr, "create dbus error. \n" );
-		return NULL;
-	}
-	keyboard->userdir = get_handwrite_config_dir ();
+    keyboard = create_dbus();
+    if (G_UNLIKELY(!keyboard)) {
+        fprintf(stderr, "create dbus error. \n");
+        return NULL;
+    }
+    keyboard->userdir = get_handwrite_config_dir();
 
-	gchar *rcpath = g_strdup_printf ( "%s/gtkrc", keyboard->userdir );
-	gtk_rc_parse ( rcpath );	/* 设置GTKRC */
-	g_free ( rcpath );
+    gchar *rcpath = g_strdup_printf("%s/gtkrc", keyboard->userdir);
+    gtk_rc_parse(rcpath);
+    g_free(rcpath);
 
-	sprintf ( filepath, "%s/writer.png", keyboard->userdir );
-	keyboard->stk = stroke_create ( filepath );		/* 手写初始化 */
+    sprintf(filepath, "%s/writer.png", keyboard->userdir);
+    keyboard->stk = stroke_create(filepath);
 
-	/* 创建键盘窗口 */
-	keyboard->window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
-	gtk_window_set_default_size ( GTK_WINDOW ( keyboard->window ), 650, 198 );
-	gtk_window_set_keep_above ( GTK_WINDOW ( keyboard->window ), TRUE );
-	gtk_window_set_accept_focus ( GTK_WINDOW ( keyboard->window ), FALSE );
-	gtk_window_set_skip_taskbar_hint ( GTK_WINDOW ( keyboard->window ), FALSE );
-	gtk_window_set_decorated ( GTK_WINDOW ( keyboard->window ), FALSE );
-	gtk_window_set_position ( GTK_WINDOW ( keyboard->window ), GTK_WIN_POS_CENTER );
-	gtk_widget_add_events ( keyboard->window, GDK_BUTTON_PRESS_MASK );
-	gtk_widget_show ( keyboard->window );
+    /* 创建键盘窗口 */
+    keyboard->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_default_size(GTK_WINDOW(keyboard->window), 650, 198);
+    gtk_window_set_keep_above(GTK_WINDOW(keyboard->window), TRUE);
+    gtk_window_set_accept_focus(GTK_WINDOW(keyboard->window), FALSE);
+    gtk_window_set_skip_taskbar_hint(GTK_WINDOW(keyboard->window), FALSE);
+    gtk_window_set_decorated(GTK_WINDOW(keyboard->window), FALSE);
+    gtk_window_set_position(GTK_WINDOW(keyboard->window), GTK_WIN_POS_CENTER);
+    gtk_widget_add_events(keyboard->window, GDK_BUTTON_PRESS_MASK);
+    gtk_widget_show(keyboard->window);
 
-	/* 按下鼠标右键可移动窗口 */
-	g_signal_connect ( keyboard->window, "button-press-event",
-	                   G_CALLBACK ( window_move_callback ), NULL );
+    /* 按下鼠标右键可移动窗口 */
+    g_signal_connect(keyboard->window, "button-press-event",
+                     G_CALLBACK(window_move_callback), NULL);
 
-	set_window_background ( keyboard->window, keyboard );		/*设置窗口背景*/
+    set_window_background(keyboard->window, keyboard); /*设置窗口背景*/
 
-	fixed = gtk_fixed_new ();
-	gtk_container_add ( GTK_CONTAINER ( keyboard->window ), fixed );
-	gtk_widget_show ( fixed );
+    fixed = gtk_fixed_new();
+    gtk_container_add(GTK_CONTAINER(keyboard->window), fixed);
+    gtk_widget_show(fixed);
 
-	/* 创建手写界面部件 */
-	keyboard->hand_fixed = create_hand_button ( keyboard );
-	gtk_fixed_put ( GTK_FIXED ( fixed ), keyboard->hand_fixed, 0, 0 );
+    /* 创建手写界面部件 */
+    keyboard->hand_fixed = create_hand_button(keyboard);
+    gtk_fixed_put(GTK_FIXED(fixed), keyboard->hand_fixed, 0, 0);
 
-	return keyboard->window;
+    return keyboard->window;
 }
 
 int main ( int argc, char **argv )
 {
-	GtkWidget *window = NULL;
+    GtkWidget *window = NULL;
 
-	gtk_init ( &argc, &argv );
+    gtk_init(&argc, &argv);
 
-	window = create_window ();
-	if ( !window )
-		return 1;
+    window = create_window();
+    if (G_UNLIKELY(!window))
+        return 1;
 
-	gtk_main ();
-	return 0;
+    gtk_main();
+    return 0;
 }
 
